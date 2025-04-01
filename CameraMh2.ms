@@ -1,13 +1,17 @@
-rollout CameraDataParser "Mh2 Cam Parser" (
-    label lblInfo "Enter Camera Data:" align:#left
+rollout CameraDataParser "Mh2 Cam Parser 1.1" (
+    label lblInfo "Enter Vecpair string:" align:#left
+	label spacer1 "" height:10
     editText txtInput "" width:150 height:10
+	label spacer2 "" height:5
     button btnParse "Apply Camera Movements" align:#center
     button btnExport "Export Values to clipboard" align:#center
+	label spacer3 "" height:5
+	label lblCredit "Coded by Hellwire/WhoIsPrice" align:#center
     global importedCamera = undefined
     global vecpairScale = 1.0
     global originalLookAtDistance = 1.0
     global originalRoll = 0.0
-    global originalUnknownValue = 0.5  -- This stores the value before roll (0.5 in your example)
+    global originalUnknownValue = 0.5  -- This stores the value before roll (0.5)
     
     on btnParse pressed do (
         global importedCamera, vecpairScale, originalLookAtDistance, originalRoll, originalUnknownValue
@@ -42,7 +46,6 @@ rollout CameraDataParser "Mh2 Cam Parser" (
                         local rightVec = normalize (cross upVec forwardVec)
                         upVec = cross forwardVec rightVec
                         importedCamera.transform = matrix3 rightVec upVec forwardVec importedCamera.position
-                        rotate importedCamera (eulerAngles 0 0 originalRoll)
                         firstPositionSet = true
                     )
                 )
