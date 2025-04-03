@@ -1,8 +1,10 @@
-rollout CameraDataParser "Mh2 Cam Parser 1.1" (
-    label lblInfo "Enter Vecpair string:" align:#left
+rollout CameraDataParser "Mh2 Cam Parser 1.2" (
+    label lblInfo "Enter Vecpair string:" align:#center
 	label spacer1 "" height:10
-    editText txtInput "" width:150 height:10
+    editText txtInput "" width:280 height:10 align:#center
 	label spacer2 "" height:5
+	button btnreset "Reset string field" align:#center
+	label spacer4 "" height:5
     button btnParse "Apply Camera Movements" align:#center
     button btnExport "Export Values to clipboard" align:#center
 	label spacer3 "" height:5
@@ -11,7 +13,7 @@ rollout CameraDataParser "Mh2 Cam Parser 1.1" (
     global vecpairScale = 1.0
     global originalLookAtDistance = 1.0
     global originalRoll = 0.0
-    global originalUnknownValue = 0.5  -- This stores the value before roll (0.5)
+    global originalUnknownValue = 0.5
     
     on btnParse pressed do (
         global importedCamera, vecpairScale, originalLookAtDistance, originalRoll, originalUnknownValue
@@ -26,7 +28,7 @@ rollout CameraDataParser "Mh2 Cam Parser 1.1" (
             local cleanLine = trimLeft line
             if matchPattern cleanLine pattern:"VECPAIR*" do (
                 local tokens = filterString cleanLine " \t"
-                if tokens.count >= 10 do (  -- Changed from 9 to 10 to account for all values
+                if tokens.count >= 10 do (  
                     vecpairScale = tokens[2] as float
                     local posX = tokens[3] as float
                     local posY = tokens[4] as float
@@ -34,8 +36,8 @@ rollout CameraDataParser "Mh2 Cam Parser 1.1" (
                     local lookAtX = tokens[6] as float
                     local lookAtY = tokens[7] as float
                     local lookAtZ = tokens[8] as float
-                    originalUnknownValue = tokens[9] as float  -- Store the 0.5 value
-                    originalRoll = tokens[10] as float  -- Store the roll value
+                    originalUnknownValue = tokens[9] as float
+                    originalRoll = tokens[10] as float
                 
                     if not firstPositionSet then (
                         importedCamera.position = [posX, posY, posZ]
@@ -70,5 +72,10 @@ rollout CameraDataParser "Mh2 Cam Parser 1.1" (
             messageBox "No imported camera found for export." title:"Error"
         )
     )
+	
+	on btnReset pressed do (
+	txtInput.text = ""  
+			
+	)
 )
-createDialog CameraDataParser
+createDialog CameraDataParser width:302 height:200
