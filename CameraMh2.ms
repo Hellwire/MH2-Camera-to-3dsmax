@@ -43,7 +43,7 @@ rollout CameraDataParser "Mh2 Cam Parser 1.2" (
                         importedCamera.position = [posX, posY, posZ]
                         local targetPos = [lookAtX, lookAtY, lookAtZ]
                         originalLookAtDistance = length (targetPos - importedCamera.position)
-                        local forwardVec = normalize (targetPos - importedCamera.position)
+                        local forwardVec = normalize (importedCamera.position - targetPos)
                         local upVec = [0, 0, 1]
                         local rightVec = normalize (cross upVec forwardVec)
                         upVec = cross forwardVec rightVec
@@ -58,7 +58,7 @@ rollout CameraDataParser "Mh2 Cam Parser 1.2" (
     on btnExport pressed do (
         if importedCamera != undefined and isValidNode importedCamera then (
             local pos = importedCamera.position
-            local forwardVec = normalize (importedCamera.transform.row3)
+            local forwardVec = -normalize (importedCamera.transform.row3)
             local lookAt = pos + (forwardVec * originalLookAtDistance)
             
             local exportString = "VECPAIR " + (vecpairScale as string) + " " + 
