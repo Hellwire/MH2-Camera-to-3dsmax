@@ -1,32 +1,52 @@
-rollout CameraDataParser "Mh2 Cam Parser 1.2" (
+rollout CameraDataParser "Mh2 Cam Parser 1.3" (
     label lblInfo "Enter Vecpair string:" align:#center
-	label spacer1 "" height:10
-    editText txtInput "" width:280 height:10 align:#center
-	label spacer2 "" height:5
-	button btnreset "Reset string field" align:#center
-	label spacer4 "" height:5
+    label spacer1 "" height:10
+    editText txtInput "" width:350 height:10 align:#center
+    label spacer2 "" height:5
+	checkbox chkDeleteOnReset "Delete camera on reset" checked:true align:#center
+    button btnreset "Reset" align:#center
+    label spacer4 "" height:5
     button btnParse "Apply Camera Movements" align:#center
     button btnExport "Export Values to clipboard" align:#center
-	label spacer3 "" height:5
-	label lblCredit "Coded by Hellwire/WhoIsPrice" align:#center
+    label spacer3 "" height:5
+    label lblCredit "Coded by Hellwire/WhoIsPrice" align:#center
+    
     global importedCamera = undefined
     global vecpairScale = 1.0
     global originalLookAtDistance = 1.0
     global originalRoll = 0.0
     global originalUnknownValue = 0.5
+    global hasAtSymbol = false
+    global createdCameras = #() -- Array to store all created cameras
+    
+    fn deleteCreatedCameras = (
+        for cam in createdCameras where isValidNode cam do (
+            delete cam
+        )
+        createdCameras = #() -- Clear the array
+        importedCamera = undefined -- Reset the global camera reference
+    )
     
     on btnParse pressed do (
-        global importedCamera, vecpairScale, originalLookAtDistance, originalRoll, originalUnknownValue
+        global importedCamera, vecpairScale, originalLookAtDistance, originalRoll, originalUnknownValue, hasAtSymbol, createdCameras
         local inputData = txtInput.text
         local lines = filterString inputData "\n"
+        
+        -- Delete any existing cameras before creating new ones
+        deleteCreatedCameras()
+        
         importedCamera = freecamera()
         importedCamera.name = uniquename "ImportedCamera"
+        append createdCameras importedCamera -- Add to tracking array
         select importedCamera 
         local firstPositionSet = false
     
         for line in lines do (
             local cleanLine = trimLeft line
             if matchPattern cleanLine pattern:"VECPAIR*" do (
+                -- Check if line has @ symbol
+                hasAtSymbol = matchPattern cleanLine pattern:"*@*"
+                
                 local tokens = filterString cleanLine " \t"
                 if tokens.count >= 10 do (  
                     vecpairScale = tokens[2] as float
@@ -61,10 +81,18 @@ rollout CameraDataParser "Mh2 Cam Parser 1.2" (
             local forwardVec = -normalize (importedCamera.transform.row3)
             local lookAt = pos + (forwardVec * originalLookAtDistance)
             
-            local exportString = "VECPAIR " + (vecpairScale as string) + " " + 
+            local vecpairPrefix = "VECPAIR"
+            if hasAtSymbol then vecpairPrefix += "@"
+            
+            local exportString = vecpairPrefix + " " + (vecpairScale as string) + " " + 
                               (pos.x as string) + " " + (pos.y as string) + " " + (pos.z as string) + " " + 
                               (lookAt.x as string) + " " + (lookAt.y as string) + " " + (lookAt.z as string) + " " + 
                               (originalUnknownValue as string) + " " + (originalRoll as string)
+            
+            -- Preserve tab before vecpair strings if original had one
+            if matchPattern txtInput.text pattern:"*\tVECPAIR*" do (
+                exportString = "\t" + exportString
+            )
             
             setClipboardText exportString
             messageBox "Camera values copied to clipboard!" title:"Export Success"
@@ -72,10 +100,13 @@ rollout CameraDataParser "Mh2 Cam Parser 1.2" (
             messageBox "No imported camera found for export." title:"Error"
         )
     )
-	
-	on btnReset pressed do (
-	txtInput.text = ""  
-			
-	)
+    
+    on btnReset pressed do (
+        txtInput.text = ""  
+        hasAtSymbol = false
+		if chkDeleteOnReset.checked do (
+			deleteCreatedCameras()
+		)	
+    )
 )
-createDialog CameraDataParser width:302 height:200
+createDialog CameraDataParser width:402 height:200
