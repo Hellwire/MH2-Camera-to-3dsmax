@@ -1,54 +1,51 @@
-rollout CameraDataParser "Mh2 Cam Parser 1.3" (
+rollout CameraDataParser "Mh2 Cam Parser 1.4" (
     label lblInfo "Enter Vecpair string:" align:#center
     label spacer1 "" height:10
     editText txtInput "" width:350 height:10 align:#center
     label spacer2 "" height:5
-	checkbox chkDeleteOnReset "Delete camera on reset" checked:true align:#center
+    checkbox chkDeleteOnReset "Delete camera on reset" checked:true align:#center
     button btnreset "Reset" align:#center
     label spacer4 "" height:5
     button btnParse "Apply Camera Movements" align:#center
     button btnExport "Export Values to clipboard" align:#center
     label spacer3 "" height:5
     label lblCredit "Coded by Hellwire/WhoIsPrice" align:#center
-    
+
     global importedCamera = undefined
     global vecpairScale = 1.0
     global originalLookAtDistance = 1.0
     global originalRoll = 0.0
     global originalUnknownValue = 0.5
     global hasAtSymbol = false
-    global createdCameras = #() -- Array to store all created cameras
-    
+    global createdCameras = #()
+    global cameraMetaData = #() -- use associative array with handles
+
     fn deleteCreatedCameras = (
         for cam in createdCameras where isValidNode cam do (
             delete cam
         )
-        createdCameras = #() -- Clear the array
-        importedCamera = undefined -- Reset the global camera reference
+        createdCameras = #()
+        importedCamera = undefined
+        cameraMetaData = #()
     )
-    
+
     on btnParse pressed do (
-        global importedCamera, vecpairScale, originalLookAtDistance, originalRoll, originalUnknownValue, hasAtSymbol, createdCameras
         local inputData = txtInput.text
         local lines = filterString inputData "\n"
-        
-        -- Delete any existing cameras before creating new ones
-        deleteCreatedCameras()
-        
+
         importedCamera = freecamera()
         importedCamera.name = uniquename "ImportedCamera"
-        append createdCameras importedCamera -- Add to tracking array
-        select importedCamera 
+        append createdCameras importedCamera
+        select importedCamera
         local firstPositionSet = false
-    
+
         for line in lines do (
             local cleanLine = trimLeft line
             if matchPattern cleanLine pattern:"VECPAIR*" do (
-                -- Check if line has @ symbol
                 hasAtSymbol = matchPattern cleanLine pattern:"*@*"
-                
+
                 local tokens = filterString cleanLine " \t"
-                if tokens.count >= 10 do (  
+                if tokens.count >= 10 do (
                     vecpairScale = tokens[2] as float
                     local posX = tokens[3] as float
                     local posY = tokens[4] as float
@@ -58,7 +55,7 @@ rollout CameraDataParser "Mh2 Cam Parser 1.3" (
                     local lookAtZ = tokens[8] as float
                     originalUnknownValue = tokens[9] as float
                     originalRoll = tokens[10] as float
-                
+
                     if not firstPositionSet then (
                         importedCamera.position = [posX, posY, posZ]
                         local targetPos = [lookAtX, lookAtY, lookAtZ]
@@ -69,44 +66,61 @@ rollout CameraDataParser "Mh2 Cam Parser 1.3" (
                         upVec = cross forwardVec rightVec
                         importedCamera.transform = matrix3 rightVec upVec forwardVec importedCamera.position
                         firstPositionSet = true
+
+                        local camHandle = getHandleByAnim importedCamera
+                        cameraMetaData[camHandle] = #(vecpairScale, originalLookAtDistance, originalUnknownValue, originalRoll, hasAtSymbol)
                     )
                 )
             )
         )
     )
-    
+
     on btnExport pressed do (
-        if importedCamera != undefined and isValidNode importedCamera then (
-            local pos = importedCamera.position
-            local forwardVec = -normalize (importedCamera.transform.row3)
-            local lookAt = pos + (forwardVec * originalLookAtDistance)
-            
-            local vecpairPrefix = "VECPAIR"
-            if hasAtSymbol then vecpairPrefix += "@"
-            
-            local exportString = vecpairPrefix + " " + (vecpairScale as string) + " " + 
-                              (pos.x as string) + " " + (pos.y as string) + " " + (pos.z as string) + " " + 
-                              (lookAt.x as string) + " " + (lookAt.y as string) + " " + (lookAt.z as string) + " " + 
-                              (originalUnknownValue as string) + " " + (originalRoll as string)
-            
-            -- Preserve tab before vecpair strings if original had one
-            if matchPattern txtInput.text pattern:"*\tVECPAIR*" do (
-                exportString = "\t" + exportString
+        if selection.count == 1 and isKindOf selection[1] camera then (
+            local cam = selection[1]
+            local camHandle = getHandleByAnim cam
+            local pos = cam.position
+            local forwardVec = -normalize (cam.transform.row3)
+
+            if cameraMetaData[camHandle] != undefined then (
+                local meta = cameraMetaData[camHandle]
+                local scale = meta[1]
+                local lookDist = meta[2]
+                local unknownVal = meta[3]
+                local rollVal = meta[4]
+                local hasAt = meta[5]
+
+                local lookAt = pos + (forwardVec * lookDist)
+
+                local vecpairPrefix = "VECPAIR"
+                if hasAt then vecpairPrefix += "@"
+
+                local exportString = vecpairPrefix + " " + (scale as string) + " " +
+                    (pos.x as string) + " " + (pos.y as string) + " " + (pos.z as string) + " " +
+                    (lookAt.x as string) + " " + (lookAt.y as string) + " " + (lookAt.z as string) + " " +
+                    (unknownVal as string) + " " + (rollVal as string)
+
+                if matchPattern txtInput.text pattern:"*\tVECPAIR*" do (
+                    exportString = "\t" + exportString
+                )
+
+                setClipboardText exportString
+                messageBox "Selected camera values copied to clipboard!" title:"Export Success"
+            ) else (
+                messageBox "No metadata found for selected camera." title:"Error"
             )
-            
-            setClipboardText exportString
-            messageBox "Camera values copied to clipboard!" title:"Export Success"
         ) else (
-            messageBox "No imported camera found for export." title:"Error"
+            messageBox "Please select exactly one camera to export." title:"Error"
         )
     )
-    
+
     on btnReset pressed do (
-        txtInput.text = ""  
+        txtInput.text = ""
         hasAtSymbol = false
-		if chkDeleteOnReset.checked do (
-			deleteCreatedCameras()
-		)	
+        if chkDeleteOnReset.checked do (
+            deleteCreatedCameras()
+        )
     )
 )
+
 createDialog CameraDataParser width:402 height:200
