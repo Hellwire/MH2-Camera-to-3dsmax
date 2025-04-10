@@ -1,18 +1,32 @@
-rollout CameraDataParser "Mh2 Cam Parser 1.5" (
+rollout CameraDataParser "Mh2 Cam Parser 1.6" (
     label lblInfo "Enter Vecpair strings:" align:#center
-    label spacer1 "" height:10
-    editText txtInput "" width:350 height:60 align:#center
+    label spacer1 "" height:0.5
+    editText txtInput "" width:350 height:90 align:#center
     label spacer2 "" height:5
     checkbox chkDeleteOnReset "Delete cameras on reset" checked:true align:#center
-    button btnreset "Reset" align:#center
-    label spacer4 "" height:5
-    button btnParse "Import Cameras" align:#center
-    button btnExport "Export Selected to Clipboard" align:#center
-    label spacer3 "" height:5
-    label lblCredit "Coded by Hellwire/WhoIsPrice - Modified" align:#center
+    button btnreset "Reset" align:#center width:50 height:30
+    label spacer4 "" height:10
+	
+	group "Controls" (
+		button btnParse "Import Cameras" align:#center width:150 height:20
+		button btnExport "Export Selected to Clipboard" align:#center width:150 height:20
+		button btnCreateHelper "Add Helper" width:100 height:20
+	)
+	label spacer3 "" height:5
+    label lblCredit "Coded by Hellwire/WhoIsPrice" align:#center
 
     global createdCameras = #()
     global cameraMetaData = #() -- handle: #(scale, lookDist, unknown, roll, hasAt)
+
+    -- Helper function to join strings with delimiter
+    fn joinString arr delimiter = (
+        local str = ""
+        for i = 1 to arr.count do (
+            str += arr[i]
+            if i < arr.count do str += delimiter
+        )
+        return str
+    )
 
     fn deleteCreatedCameras = (
         for cam in createdCameras where isValidNode cam do delete cam
@@ -61,27 +75,50 @@ rollout CameraDataParser "Mh2 Cam Parser 1.5" (
     )
 
     on btnExport pressed do (
-        if selection.count == 1 and isKindOf selection[1] camera then (
-            local cam = selection[1]
-            local handle = getHandleByAnim cam
-            if cameraMetaData[handle] != undefined then (
-                local meta = cameraMetaData[handle]
-                local pos = cam.position
-                local forwardVec = -normalize (cam.transform.row3)
-                local lookAt = pos + (forwardVec * meta[2])
-                local prefix = if meta[5] then "VECPAIR@" else "VECPAIR"
-                local exportStr = prefix + " " + (meta[1] as string) + " " +
-                    (pos.x as string) + " " + (pos.y as string) + " " + (pos.z as string) + " " +
-                    (lookAt.x as string) + " " + (lookAt.y as string) + " " + (lookAt.z as string) + " " +
-                    (meta[3] as string) + " " + (meta[4] as string)
-                setClipboardText exportStr
-                messageBox "Camera data copied to clipboard!" title:"Success"
+        local selectedCameras = for obj in selection where isKindOf obj camera collect obj
+        
+        if selectedCameras.count > 0 then (
+            local exportStrings = #()
+            
+            for cam in selectedCameras do (
+                local handle = getHandleByAnim cam
+                if cameraMetaData[handle] != undefined then (
+                    local meta = cameraMetaData[handle]
+                    local pos = cam.position
+                    local forwardVec = -normalize (cam.transform.row3)
+                    local lookAt = pos + (forwardVec * meta[2])
+                    local prefix = if meta[5] then "VECPAIR@" else "VECPAIR"
+                    local exportStr = prefix + " " + (meta[1] as string) + " " +
+                        (pos.x as string) + " " + (pos.y as string) + " " + (pos.z as string) + " " +
+                        (lookAt.x as string) + " " + (lookAt.y as string) + " " + (lookAt.z as string) + " " +
+                        (meta[3] as string) + " " + (meta[4] as string)
+                    
+                    append exportStrings exportStr
+                )
+            )
+            
+            if exportStrings.count > 0 then (
+                setClipboardText (joinString exportStrings "\n")
+                messageBox ((exportStrings.count as string) + " camera(s) exported to clipboard!") title:"Success"
             ) else (
-                messageBox "No metadata for selected camera." title:"Error"
+                messageBox "No metadata found for selected cameras." title:"Error"
             )
         ) else (
-            messageBox "Select exactly one camera." title:"Error"
+            messageBox "Please select one or more cameras to export." title:"Error"
         )
+    )
+
+    on btnCreateHelper pressed do (
+        -- Create cylinder with specified dimensions at origin
+        local helperCylinder = cylinder()
+        helperCylinder.name = "CameraHelper"
+        helperCylinder.radius = 0.02
+        helperCylinder.height = 1.652
+        helperCylinder.pos = [0,0,0]
+        helperCylinder.wirecolor = color 255 0 0  -- Make it red for visibility
+        
+        -- Select the new helper
+        select helperCylinder
     )
 
     on btnReset pressed do (
@@ -90,4 +127,4 @@ rollout CameraDataParser "Mh2 Cam Parser 1.5" (
     )
 )
 
-createDialog CameraDataParser width:402 height:230
+createDialog CameraDataParser width:402 height:340
