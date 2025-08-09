@@ -1,8 +1,14 @@
-this tool is for Manhunt 1 & 2 camera angle editing
-this 3dsmax script lets you import a VECPAIR camera. lets you move the camera and export the values to clipboard again. 
-imported string should look like this for example:
-    VECPAIR 0.9625    -0.351533 1.5745 1.69162    -0.159181 1.2347 1.62118    0.5 8.95559
+This Tool is for editing camera angles 
+for Manhunt 1 & 2.
 
-The camera in 3dsmax appears to be flipped. but if you take that into account you can edit the camera more easily with this.
-maybe this can be fixed in the future
+Supports either legacy copy / paste function to text field. 
+or since version 2.0 its possible to manipulate the tvp file directly
 
+Manhunt 2 stores its execution camera angles in this file: 
+Manhunt2\global\ini\resource13.glg
+
+On Manhunt 2 PC version
+It needs to be decrypted first! you can use MDL Editor by Allen for this or the Manhunt toolkit.
+or download a already modified camera file that is already decrypted
+
+The console files can be edited directly
