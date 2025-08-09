@@ -12,3 +12,4 @@ It needs to be decrypted first! you can use MDL Editor by Allen for this or the 
 or download a already modified camera file that is already decrypted
 
 The console files can be edited directly
+![Uploading Capture.JPG…]()
